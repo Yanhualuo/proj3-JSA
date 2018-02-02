@@ -74,7 +74,7 @@ def success():
 #######################
 
 
-@app.route("/_check", methods=["POST"])
+@app.route("/_check")
 def check():
     """
     User has submitted the form with a word ('attempt')
@@ -85,43 +85,41 @@ def check():
     already found.
     """
     app.logger.debug("Entering check")
-
+    
     # The data we need, from form and from cookie
-    text = flask.request.form["attempt"]
+    text = flask.request.args.get("text", type=str)
+    app.logger.debug(flask.session["target_count"])
     jumble = flask.session["jumble"]
     matches = flask.session.get("matches", [])  # Default to empty list
 
     # Is it good?
     in_jumble = LetterBag(jumble).contains(text)
     matched = WORDS.has(text)
-
+    
     # Respond appropriately
     if matched and in_jumble and not (text in matches):
-        # Cool, they found a new word
+        # Cool, they found a new word #using flask.flash would cause the 500 Internal Server Error
         matches.append(text)
         flask.session["matches"] = matches
+        rslt = {"word": "found", "number": len(matches), "limit": flask.session["target_count"]}
+        return flask.jsonify(result=rslt)
     elif text in matches:
-        flask.flash("You already found {}".format(text))
+        rslt = {"word": "already found"}
+        return flask.jsonify(result=rslt)
     elif not matched:
-        flask.flash("{} isn't in the list of words".format(text))
+        rslt = {"word": "not match"}
+        return flask.jsonify(result=rslt)
     elif not in_jumble:
-        flask.flash(
-            '"{}" can\'t be made from the letters {}'.format(text, jumble))
+        rslt = {"word": "not in jumble"}
+        return flask.jsonify(result=rslt)
     else:
         app.logger.debug("This case shouldn't happen!")
         assert False  # Raises AssertionError
-
-    # Choose page:  Solved enough, or keep going?
-    if len(matches) >= flask.session["target_count"]:
-       return flask.redirect(flask.url_for("success"))
-    else:
-       return flask.redirect(flask.url_for("keep_going"))
 
 ###############
 # AJAX request handlers
 #   These return JSON, rather than rendering pages.
 ###############
-
 
 @app.route("/_example")
 def example():
@@ -177,4 +175,4 @@ if __name__ == "__main__":
         app.logger.setLevel(logging.DEBUG)
         app.logger.info(
             "Opening for global access on port {}".format(CONFIG.PORT))
-        app.run(port=CONFIG.PORT, host="0.0.0.0")
+        app.run(port=CONFIG.PORT, host="0.0.0.0", debug=True)

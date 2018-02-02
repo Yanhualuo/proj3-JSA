@@ -81,10 +81,10 @@
 <div class="row">
   <div class="col-xs-6 text-center">
   <form id="entry" method="POST" action="/_check">
-    <label for="attempt">Word:</label>
+    <label for="attempt">Words:</label>
     <input id="attempt" name="attempt" type="text" width="15"
       autocomplete="off"  autofocus />
-    <input type="submit" name="try" />
+  <!--  <input type="submit" name="try" /> -->
   </form>
 </div></div>
 
@@ -109,7 +109,46 @@
   {% endif %}
 {% endwith %}
 
+<h3>Found:</h3>
+<p id="found"></p>
 
+<script>
+  // Suppress normal form submission
+$("#entry").submit( function(event) {
+   event.preventDefault();
+  });
+
+$("#attempt").keyup(function(event) {
+   var txt = $("#attempt").val();  // Current content of the input field
+   var keycode = event.which;      // They key that just went up
+   var letter = String.fromCharCode(keycode);
+
+   if (! "ABCDEFGHIJKLMNOPQRSTUVWXYZ".includes(letter)) { return }
+
+   $.getJSON( "/_check", { text: txt }, 
+              function(data) {
+                rsval = data.result.word;
+                match = data.result.number;
+                limit = data.result.limit
+                
+                console.log("rsval: " + rsval);
+                if (rsval == "found") {
+                   $("#found").append(txt + ", ");
+                   $("#attempt").val("");
+
+                   if (match >= limit){
+                    window.location.replace(("/success"));
+                   }
+                   else{
+                    window.location.replace(("/keep_going"));
+                   }
+                   
+                }
+                
+               }
+           );
+   });
+</script>
 
  </div> <!-- container -->
 </body> </html>
